@@ -53,7 +53,7 @@ class NeuralNet(object):
         # perform forward propagation. hX is the hypothesised output
         hX = X
         for t in self._theta:
-            hX = sigmoid(np.dot(np.hstack([np.ones((m, 1)), hX]), t.transpose()))
+            hX = sigmoid(np.dot(np.hstack((np.ones((m, 1)), hX)), t.transpose()))
 
         # calculate the cost
         J = (1.0 / m) * (-y * np.log(hX) - (1.0 - y) * np.log(1.0 - hX)).sum()
@@ -74,14 +74,14 @@ class NeuralNet(object):
 
         for i in range(m):
             # first layer just the inputs with the bias unit
-            a = [np.vstack([1, X[i, :, np.newaxis]])]
+            a = [np.vstack((1, X[i, :, np.newaxis]))]
             # there is no input z, so use a dummy value
             z = [0]
 
             # propagate forward
             for j in range(len(self._theta)):
                 z.append(np.dot(self._theta[j], a[-1]))
-                a.append(np.vstack([1, sigmoid(z[-1])]))
+                a.append(np.vstack((1, sigmoid(z[-1]))))
                 # the last layer does not have a bias unit
             a[-1] = a[-1][1:, :]
 
@@ -106,9 +106,9 @@ class NeuralNet(object):
         for j in range(len(self._theta)):
             s = self._theta[j].shape
 
-            thetaGrad[j] = (1.0 / m) * (Delta[j] + l * np.hstack([
+            thetaGrad[j] = (1.0 / m) * (Delta[j] + l * np.hstack((
                 np.zeros((s[0], 1)), self._theta[j][:, 1:]
-            ]))
+            )))
 
         return self._unroll(thetaGrad)
 
@@ -146,7 +146,7 @@ class NeuralNet(object):
 
         hX = X
         for t in self._theta:
-            hX = sigmoid(np.dot(np.hstack([np.ones((m, 1)), hX]), t.transpose()))
+            hX = sigmoid(np.dot(np.hstack((np.ones((m, 1)), hX)), t.transpose()))
 
         return hX
 
@@ -157,7 +157,7 @@ class NeuralNet(object):
             returns:
                 the rolled vector
         """
-        return np.hstack([v.ravel() for v in arrList])
+        return np.hstack((v.ravel() for v in arrList))
 
     def _roll(self, V):
         """ takes an unrolled up theta vector and rolls it into
