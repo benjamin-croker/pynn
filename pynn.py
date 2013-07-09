@@ -134,7 +134,7 @@ class NeuralNet(object):
             print 'iter'
 
         # minimise
-        thetaParams = op.fmin_cg(f, self._unroll(self._theta), fGrad, maxiter=100,
+        thetaParams = op.fmin_bfgs(f, self._unroll(self._theta), fGrad, maxiter=100,
                                  full_output=1)
         # set parameters
         self._theta = self._roll(thetaParams[0])
