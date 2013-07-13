@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import scipy.io as io
 import scipy.optimize as op
 
 
@@ -26,24 +24,26 @@ class NeuralNet(object):
     """ class that contains a Neural Network
     and functions for intialising and training it"""
 
-    def __init__(self, layerSizes):
+    def __init__(self, inputSize, hiddenSize, outputSize, epsilon=0.12):
         """ creates a NeuralNet object
-        params:
-            layerSizes - a list of the number of units in each layer.
-                Must be of length at least 3 (input, hidden and output).
-                The sizes do NOT included the bias units, which are included
-                on all layers except for the output layer
+        :param inputSize: number of input units
+        :param hiddenSize: number of hidden units
+        :param outputSize: number of output units
+        :param epsilon: the std dev when generating initial random weights
         """
-        # internal variables set:
-        #	self._theta - list of theta matrices
-        self._theta = []
+        # store both theta1 and theta2 in a continuous block of memory, so that
+        # the whole set of theta parameters can easily be flattened for use
+        # by optimisation routines
+        self._theta = np.zeros((hiddenSize + 1, inputSize+outputSize+1))
+
+        # define theta1 and theta2 as views into the theta block
+        self._theta1 = self._theta[:hiddenSize, :inputSize+1]
+        self._theta2 = self._theta[:, inputSize+1:].T
 
         # randomly initialise the weights
-        # TODO: move EPSILON to a parameter
-        EPSILON = 0.12
-        for i in range(len(layerSizes) - 1):
-            self._theta += [np.random.rand(layerSizes[i + 1], layerSizes[i] + 1)
-                            * 2 * EPSILON - EPSILON]
+        self._theta1[:] = np.random.rand(*self._theta1.shape) * 2*epsilon - epsilon
+        self._theta2[:] = np.random.rand(*self._theta2.shape) * 2*epsilon - epsilon
+
 
     def _cost(self, X, y, l):
         # first compute forward propogation.
@@ -51,16 +51,17 @@ class NeuralNet(object):
         m = X.shape[0]
 
         # perform forward propagation. hX is the hypothesised output
+        # X already has the bias units added
         hX = X
-        for t in self._theta:
-            hX = sigmoid(np.dot(np.hstack((np.ones((m, 1)), hX)), t.transpose()))
+        hX = sigmoid(np.dot(hX, self._theta1.T))
+        hX = sigmoid(np.dot(np.hstack((np.ones((m, 1)), hX)), self._theta2.T))
 
         # calculate the cost
         J = (1.0 / m) * (-y * np.log(hX) - (1.0 - y) * np.log(1.0 - hX)).sum()
         # calculate regularisation
         reg = 0
-        for t in self._theta:
-            reg += (t[:, 1:] ** 2).sum()
+        reg += (self._theta1[:, 1:] ** 2).sum()
+        reg += (self._theta2[:, 1:] ** 2).sum()
         reg *= l / (2.0 * m)
 
         return J + reg
@@ -68,85 +69,86 @@ class NeuralNet(object):
     def _costGrad(self, X, y, l):
         # number of training examples
         m = X.shape[0]
+
         # set gradient vectors
-        Delta = [np.zeros(t.shape, float) for t in self._theta]
-        thetaGrad = [np.zeros(t.shape, float) for t in self._theta]
+        Delta1 = np.zeros(self._theta1.shape, float)
+        Delta2 = np.zeros(self._theta2.shape, float)
+
+        # store both thetaGrad1 and thetaGrad2 in a continuous block of memory,
+        # so that the whole set of theta parameters can easily be flattened for
+        # use by optimisation routines
+
+        thetaGrad = np.zeros(self._theta.shape)
+
+        thetaGrad1 = thetaGrad[:self._theta1.shape[0], :self._theta1.shape[1]]
+        thetaGrad2 = thetaGrad[:, self._theta1.shape[1]:].T
 
         for i in range(m):
-            # first layer just the inputs with the bias unit
-            a = [np.vstack((1, X[i, :, np.newaxis]))]
-            # there is no input z, so use a dummy value
-            z = [0]
-
             # propagate forward
-            for j in range(len(self._theta)):
-                z.append(np.dot(self._theta[j], a[-1]))
-                a.append(np.vstack((1, sigmoid(z[-1]))))
-                # the last layer does not have a bias unit
-            a[-1] = a[-1][1:, :]
+            a1 = X[i, :, np.newaxis]
+
+            z2 = np.dot(self._theta1, a1)
+            a2 = np.vstack((1, sigmoid(z2)))
+
+            z3 = np.dot(self._theta2, a2)
+            a3 = sigmoid(z3)
 
             # calculate error between calculated and actual
-            delta = [a[-1] - y[i, :, np.newaxis]]
-
+            delta3 = a3 - y[i, :, np.newaxis]
             # propagate error backward
-            for j in range(len(self._theta))[::-1]:
-                # there is no error for the input layer
-                if j == 0:
-                    delta.insert(0, 0)
-                else:
-                    delta.insert(0,
-                                 np.dot(self._theta[j].transpose(), delta[0])[1:, :]
-                                 * sigmoidGrad(z[j])
-                    )
-                Delta[j] += np.dot(delta[1], a[j].transpose())
+            delta2 = np.dot(self._theta2.T, delta3)[1:, :]*sigmoidGrad(z2)
+
+            # accumulate error
+            Delta1 += np.dot(delta2, a1.T)
+            Delta2 += np.dot(delta3, a2.T)
+
 
         # calculate the gradients, with regularisation.
         # Note that the first column of theta is removed, as it corresponds
         # to the bias units
-        for j in range(len(self._theta)):
-            s = self._theta[j].shape
+        thetaGrad1[:] = (1.0 / m) * (Delta1 + l*np.hstack((
+                np.zeros((self._theta1.shape[0], 1)), self._theta1[:, 1:]
+                )))
+        thetaGrad2[:] = (1.0 / m) * (Delta2 + l*np.hstack((
+                np.zeros((self._theta2.shape[0], 1)), self._theta2[:, 1:]
+                )))
+        return thetaGrad.ravel()
 
-            thetaGrad[j] = (1.0 / m) * (Delta[j] + l * np.hstack((
-                np.zeros((s[0], 1)), self._theta[j][:, 1:]
-            )))
 
-        return self._unroll(thetaGrad)
-
-    # TODO: Check backprop values & set functions to be stuck into fmin
-
-    def train(self, X, y, l):
+    def train(self, X, y, l, maxiter=100):
         """ returns the cost
         """
         #define functions to be minimised
         def f(thetaParams):
             # set theta
-            self._theta = self._roll(thetaParams)
+            self._theta.ravel()[:] = thetaParams
             # calculate the cost
             return self._cost(X, y, l)
 
         def fGrad(thetaParams):
             # set theta
-            self._theta = self._roll(thetaParams)
-            # calculate the cost
+            self._theta.ravel()[:] = thetaParams
+            # calculate the cost gradient
             return self._costGrad(X, y, l)
 
-        def callback(*args):
-            print 'iter'
+        # add the bias units to the input matrix
+        m = X.shape[0]
+        X = np.hstack((np.ones((m, 1)), X))
 
         # minimise
-        thetaParams = op.fmin_bfgs(f, self._unroll(self._theta), fGrad, maxiter=100,
-                                 full_output=1)
+        thetaParams = op.fmin_bfgs(f, self._theta.ravel(), fGrad,
+                maxiter=maxiter, full_output=0)
         # set parameters
-        self._theta = self._roll(thetaParams[0])
-        return thetaParams[1]
+        self._theta.ravel()[:] = thetaParams
+
 
     def predict(self, X):
-        # number of training examples
+        # add the bias units to the input matrix
         m = X.shape[0]
+        hX = np.hstack((np.ones((m, 1)), X))
 
-        hX = X
-        for t in self._theta:
-            hX = sigmoid(np.dot(np.hstack((np.ones((m, 1)), hX)), t.transpose()))
+        hX = sigmoid(np.dot(hX, self._theta1.T))
+        hX = sigmoid(np.dot(np.hstack((np.ones((X.shape[0], 1)), hX)), self._theta2.T))
 
         return hX
 
