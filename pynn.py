@@ -151,32 +151,3 @@ class NeuralNet(object):
         hX = sigmoid(np.dot(np.hstack((np.ones((X.shape[0], 1)), hX)), self._theta2.T))
 
         return hX
-
-    def _unroll(self, arrList):
-        """ rolls up all theta parameters into a single vector
-            params:
-                listVs - a list of arrays
-            returns:
-                the rolled vector
-        """
-        return np.hstack((v.ravel() for v in arrList))
-
-    def _roll(self, V):
-        """ takes an unrolled up theta vector and rolls it into
-        the individual theta vectors
-            params:
-                V - the rolled up vector
-            returns:
-                a list of the theta vectors
-        """
-        # m is an index indicating the number of elements have been unrolled
-        m = 0
-        theta = []
-        # print V.shape
-        # for t in self._theta:
-        # 	print t.shape
-
-        for i in range(len(self._theta)):
-            theta.append(V[m:m + self._theta[i].size].reshape(self._theta[i].shape))
-            m = m + self._theta[i].size
-        return theta
