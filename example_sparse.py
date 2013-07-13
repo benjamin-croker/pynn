@@ -5,7 +5,7 @@ import pynn
 
 # load the iris dataset
 iris = datasets.load_iris()
-X = iris['data']
+X = sp.csr_matrix(iris['data'])
 y = iris['target']
 
 

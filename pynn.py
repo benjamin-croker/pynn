@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.optimize as op
+import scipy.sparse as sp
 
 
 def sigmoid(z):
@@ -53,7 +54,10 @@ class NeuralNet(object):
         # perform forward propagation. hX is the hypothesised output
         # X already has the bias units added
         hX = X
-        hX = sigmoid(np.dot(hX, self._theta1.T))
+        if type(X) == sp.csr.csr_matrix:
+            hX = sigmoid(np.array(hX*sp.csr_matrix(self._theta1.T).todense()))
+        else:
+            hX = sigmoid(np.dot(hX, self._theta1.T))
         hX = sigmoid(np.dot(np.hstack((np.ones((m, 1)), hX)), self._theta2.T))
 
         # calculate the cost
@@ -85,7 +89,10 @@ class NeuralNet(object):
 
         for i in range(m):
             # propagate forward
-            a1 = X[i, :, np.newaxis]
+            if type(X) == sp.csr.csr_matrix:
+                a1 = np.array(X[i, :].todense()).T
+            else:
+                a1 = X[i, :, np.newaxis]
 
             z2 = np.dot(self._theta1, a1)
             a2 = np.vstack((1, sigmoid(z2)))
@@ -133,7 +140,11 @@ class NeuralNet(object):
 
         # add the bias units to the input matrix
         m = X.shape[0]
-        X = np.hstack((np.ones((m, 1)), X))
+        if type(X) == sp.csr.csr_matrix:
+            biasCol = np.ones((X.shape[0],1))
+            X = sp.hstack((biasCol, X), format="csr")
+        else:
+            X = np.hstack((np.ones((m, 1)), X))
 
         # minimise
         thetaParams = op.fmin_bfgs(f, self._theta.ravel(), fGrad,
@@ -145,9 +156,17 @@ class NeuralNet(object):
     def predict(self, X):
         # add the bias units to the input matrix
         m = X.shape[0]
-        hX = np.hstack((np.ones((m, 1)), X))
 
-        hX = sigmoid(np.dot(hX, self._theta1.T))
+        if type(X) == sp.csr.csr_matrix:
+            biasCol = np.ones((X.shape[0],1))
+            X = sp.hstack((biasCol, X), format="csr")
+            hX = X
+            hX = sigmoid(np.array(hX*sp.csr_matrix(self._theta1.T).todense()))
+        else:
+            X = np.hstack((np.ones((m, 1)), X))
+            hX = X
+            hX = sigmoid(np.dot(hX, self._theta1.T))
+
         hX = sigmoid(np.dot(np.hstack((np.ones((X.shape[0], 1)), hX)), self._theta2.T))
 
         return hX
