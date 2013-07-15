@@ -19,7 +19,7 @@ for i in range(len(y)):
     yv[i, y[i]] = 1
 
 print "Training"
-nn.train(X, yv)
+nn.fit(X, yv)
 
 print "Predicting"
 yPred = nn.predict(X)
