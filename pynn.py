@@ -25,16 +25,20 @@ class NeuralNet(object):
     """ class that contains a Neural Network
     and functions for intialising and training it"""
 
-    def __init__(self, hiddenLayers, epsilon=0.12):
+    def __init__(self, hiddenLayers, maxiter=100, l=1, epsilon=0.12):
         """ creates a NeuralNet object
         :param hiddenLayers: number of hidden units
+        :param maxiter: the number of iterations when training
+        :param l: the regularisation when training and calculating cost
         :param epsilon: the std dev when generating initial random weights
         """
         self._hiddenLayers = hiddenLayers
+        self._l = l
+        self._maxiter = maxiter
         self._epsilon = epsilon
 
 
-    def _cost(self, X, y, l):
+    def _cost(self, X, y):
         # first compute forward propogation.
         # number of training examples
         m = X.shape[0]
@@ -54,11 +58,11 @@ class NeuralNet(object):
         reg = 0
         reg += (self._theta1[:, 1:] ** 2).sum()
         reg += (self._theta2[:, 1:] ** 2).sum()
-        reg *= l / (2.0 * m)
+        reg *= self._l / (2.0 * m)
         return J + reg
 
 
-    def _costGrad(self, X, y, l):
+    def _costGrad(self, X, y):
         # number of training examples
         m = X.shape[0]
 
@@ -100,16 +104,16 @@ class NeuralNet(object):
         # calculate the gradients, with regularisation.
         # Note that the first column of theta is removed, as it corresponds
         # to the bias units
-        thetaGrad1[:] = (1.0 / m) * (Delta1 + l*np.hstack((
+        thetaGrad1[:] = (1.0 / m) * (Delta1 + self._l*np.hstack((
                 np.zeros((self._theta1.shape[0], 1)), self._theta1[:, 1:]
                 )))
-        thetaGrad2[:] = (1.0 / m) * (Delta2 + l*np.hstack((
+        thetaGrad2[:] = (1.0 / m) * (Delta2 + self._l*np.hstack((
                 np.zeros((self._theta2.shape[0], 1)), self._theta2[:, 1:]
                 )))
         return thetaGrad.ravel()
 
 
-    def train(self, X, y, l, maxiter=100):
+    def train(self, X, y):
         """ returns the cost
         """
         #define functions to be minimised
@@ -117,13 +121,17 @@ class NeuralNet(object):
             # set theta
             self._theta.ravel()[:] = thetaParams
             # calculate the cost
-            return self._cost(X, y, l)
+            return self._cost(X, y)
 
         def fGrad(thetaParams):
             # set theta
             self._theta.ravel()[:] = thetaParams
             # calculate the cost gradient
-            return self._costGrad(X, y, l)
+            return self._costGrad(X, y)
+
+        # make y a vertical array if it's not
+        if y.ndim == 1:
+            y = y[:, np.newaxis]
 
         inputSize = X.shape[1]
         outputSize = y.shape[1]
@@ -151,7 +159,7 @@ class NeuralNet(object):
 
         # minimise
         thetaParams = op.fmin_bfgs(f, self._theta.ravel(), fGrad,
-                maxiter=maxiter, full_output=0)
+                maxiter=self._maxiter, full_output=0)
         # set parameters
         self._theta.ravel()[:] = thetaParams
 
