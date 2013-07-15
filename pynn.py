@@ -32,18 +32,10 @@ class NeuralNet(object):
         :param outputSize: number of output units
         :param epsilon: the std dev when generating initial random weights
         """
-        # store both theta1 and theta2 in a continuous block of memory, so that
-        # the whole set of theta parameters can easily be flattened for use
-        # by optimisation routines
-        self._theta = np.zeros((hiddenSize + 1, inputSize+outputSize+1))
-
-        # define theta1 and theta2 as views into the theta block
-        self._theta1 = self._theta[:hiddenSize, :inputSize+1]
-        self._theta2 = self._theta[:, inputSize+1:].T
-
-        # randomly initialise the weights
-        self._theta1[:] = np.random.rand(*self._theta1.shape) * 2*epsilon - epsilon
-        self._theta2[:] = np.random.rand(*self._theta2.shape) * 2*epsilon - epsilon
+        self._inputSize = inputSize
+        self._hiddenSize = hiddenSize
+        self._outputSize = outputSize
+        self._epsilon = epsilon
 
 
     def _cost(self, X, y, l):
@@ -137,6 +129,19 @@ class NeuralNet(object):
             self._theta.ravel()[:] = thetaParams
             # calculate the cost gradient
             return self._costGrad(X, y, l)
+
+        # store both theta1 and theta2 in a continuous block of memory, so that
+        # the whole set of theta parameters can easily be flattened for use
+        # by optimisation routines
+        self._theta = np.zeros((self._hiddenSize + 1, self._inputSize+self._outputSize+1))
+
+        # define theta1 and theta2 as views into the theta block
+        self._theta1 = self._theta[:self._hiddenSize, :self._inputSize+1]
+        self._theta2 = self._theta[:, self._inputSize+1:].T
+
+        # randomly initialise the weights
+        self._theta1[:] = np.random.rand(*self._theta1.shape) * 2*self._epsilon - self._epsilon
+        self._theta2[:] = np.random.rand(*self._theta2.shape) * 2*self._epsilon - self._epsilon
 
         # add the bias units to the input matrix
         m = X.shape[0]
