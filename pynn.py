@@ -25,16 +25,12 @@ class NeuralNet(object):
     """ class that contains a Neural Network
     and functions for intialising and training it"""
 
-    def __init__(self, inputSize, hiddenSize, outputSize, epsilon=0.12):
+    def __init__(self, hiddenLayers, epsilon=0.12):
         """ creates a NeuralNet object
-        :param inputSize: number of input units
-        :param hiddenSize: number of hidden units
-        :param outputSize: number of output units
+        :param hiddenLayers: number of hidden units
         :param epsilon: the std dev when generating initial random weights
         """
-        self._inputSize = inputSize
-        self._hiddenSize = hiddenSize
-        self._outputSize = outputSize
+        self._hiddenLayers = hiddenLayers
         self._epsilon = epsilon
 
 
@@ -59,8 +55,8 @@ class NeuralNet(object):
         reg += (self._theta1[:, 1:] ** 2).sum()
         reg += (self._theta2[:, 1:] ** 2).sum()
         reg *= l / (2.0 * m)
-
         return J + reg
+
 
     def _costGrad(self, X, y, l):
         # number of training examples
@@ -101,7 +97,6 @@ class NeuralNet(object):
             Delta1 += np.dot(delta2, a1.T)
             Delta2 += np.dot(delta3, a2.T)
 
-
         # calculate the gradients, with regularisation.
         # Note that the first column of theta is removed, as it corresponds
         # to the bias units
@@ -130,14 +125,17 @@ class NeuralNet(object):
             # calculate the cost gradient
             return self._costGrad(X, y, l)
 
+        inputSize = X.shape[1]
+        outputSize = y.shape[1]
+
         # store both theta1 and theta2 in a continuous block of memory, so that
         # the whole set of theta parameters can easily be flattened for use
         # by optimisation routines
-        self._theta = np.zeros((self._hiddenSize + 1, self._inputSize+self._outputSize+1))
+        self._theta = np.zeros((self._hiddenLayers + 1, inputSize+outputSize+1))
 
         # define theta1 and theta2 as views into the theta block
-        self._theta1 = self._theta[:self._hiddenSize, :self._inputSize+1]
-        self._theta2 = self._theta[:, self._inputSize+1:].T
+        self._theta1 = self._theta[:self._hiddenLayers, :inputSize+1]
+        self._theta2 = self._theta[:, inputSize+1:].T
 
         # randomly initialise the weights
         self._theta1[:] = np.random.rand(*self._theta1.shape) * 2*self._epsilon - self._epsilon
