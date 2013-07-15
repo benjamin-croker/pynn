@@ -113,7 +113,7 @@ class NeuralNet(object):
         return thetaGrad.ravel()
 
 
-    def train(self, X, y):
+    def fit(self, X, y):
         """ returns the cost
         """
         #define functions to be minimised
