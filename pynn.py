@@ -9,8 +9,11 @@ def sigmoid(z):
         z - a numpy array
     returns:
         g(z)"""
-    return 1.0 / (1.0 + np.exp(-z))
-
+    if type(z) == sp.csr.csr_matrix:
+        z.data[:] = 1.0 / (1.0 + np.exp(-z.data[:]))
+        return z
+    else:
+        return 1.0 / (1.0 + np.exp(-z))
 
 def sigmoidGrad(z):
     """ computes the gradient of the sigmoid function at z
@@ -18,7 +21,11 @@ def sigmoidGrad(z):
         z - a numpy array
     returns:
         g'(z)"""
-    return sigmoid(z) * (1 - sigmoid(z))
+    
+    if type(z) == sp.csr.csr_matrix:
+        return sigmoid(z).multiply(1 - sigmoid(z))
+    else:
+        return sigmoid(z) * (1 - sigmoid(z))
 
 
 class NeuralNet(object):
@@ -47,7 +54,7 @@ class NeuralNet(object):
         # X already has the bias units added
         hX = X
         if type(X) == sp.csr.csr_matrix:
-            hX = sigmoid(np.array(hX*sp.csr_matrix(self._theta1.T).todense()))
+            hX = np.array(sigmoid(hX*sp.csr_matrix(self._theta1.T)).todense())
         else:
             hX = sigmoid(np.dot(hX, self._theta1.T))
         hX = sigmoid(np.dot(np.hstack((np.ones((m, 1)), hX)), self._theta2.T))
@@ -172,7 +179,7 @@ class NeuralNet(object):
             biasCol = np.ones((X.shape[0],1))
             X = sp.hstack((biasCol, X), format="csr")
             hX = X
-            hX = sigmoid(np.array(hX*sp.csr_matrix(self._theta1.T).todense()))
+            hX = np.array(sigmoid(hX*sp.csr_matrix(self._theta1.T)).todense())
         else:
             X = np.hstack((np.ones((m, 1)), X))
             hX = X
