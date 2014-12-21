@@ -1,6 +1,5 @@
 import numpy as np
 import scipy.optimize as op
-import scipy.sparse as sp
 
 
 def sigmoid(z):

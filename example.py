@@ -1,30 +1,60 @@
-from sklearn import datasets
+from sklearn.datasets import load_iris, load_digits
+from sklearn.metrics import accuracy_score
+from sklearn.cross_validation import train_test_split
+from sklearn.preprocessing import LabelBinarizer
 import numpy as np
-import scipy.sparse as sp
+
 import pynn
 
-# load the iris dataset
-iris = datasets.load_iris()
-X = iris['data']
-y = iris['target']
+SEED = 42
+
+def iris_demo():
+    # load the iris dataset
+    iris = load_iris()
+    X = iris['data']
+    y_labels = iris['target']
+    # adjust the y values to an array with a 1 in relevant column
+    lb = LabelBinarizer()
+    y = lb.fit_transform(y_labels)
+    
+    # split into train and test datasets
+    X_train, X_test, y_train, y_test = train_test_split(X, y,
+                                                        test_size=0.25,
+                                                        random_state=SEED)
+
+    # train the neural net
+    nn = pynn.NeuralNet(n_hidden=10)
+    nn.fit(X_train, y_train)
+
+    y_pred = nn.predict(X_test)
+
+    print("iris accuracy: {}%".format(
+                accuracy_score(y_test.argmax(1), y_pred.argmax(1))*100))
 
 
-# the iris dataset has 4 variables, and three possible outputs (species)
-# 10 is arbitrarily chosen as the number of units in the hidden layer
-nn = pynn.NeuralNet(n_hidden=10)
+def digits_demo():
+    # load the iris dataset
+    digits = load_digits()
+    X = digits['data']
+    y_labels = digits['target']
+    # adjust the y values to an array with a 1 in relevant column
+    lb = LabelBinarizer()
+    y = lb.fit_transform(y_labels)
+    
+    # split into train and test datasets
+    X_train, X_test, y_train, y_test = train_test_split(X, y,
+                                                        test_size=0.25,
+                                                        random_state=SEED)
 
-# adjust the y values to an array, with a 1 in relevant column
-yv = np.zeros((y.shape[0], 3))
-for i in range(len(y)):
-    yv[i, y[i]] = 1
+    # train the neural net
+    nn = pynn.NeuralNet(n_hidden=100)
+    nn.fit(X_train, y_train)
 
-print("Training")
-nn.fit(X, yv)
+    y_pred = nn.predict(X_test)
 
-print("Predicting")
-yPred = nn.predict(X)
+    print("digits accuracy: {}%".format(
+                accuracy_score(y_test.argmax(1), y_pred.argmax(1))*100))
 
-# convert to a column of labels
-yPredLabels = yPred.argmax(1)
 
-print("accuracy: {}%".format(np.mean(yPredLabels == y) * 100))
+iris_demo()
+digits_demo()
