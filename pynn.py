@@ -5,59 +5,44 @@ import scipy.sparse as sp
 
 def sigmoid(z):
     """ computes the sigmoid function of z
-    params:
-        z - a numpy array
-    returns:
-        g(z)"""
-    if type(z) == sp.csr.csr_matrix:
-        z.data[:] = 1.0 / (1.0 + np.exp(-z.data[:]))
-        return z
-    else:
-        return 1.0 / (1.0 + np.exp(-z))
+    """
+    return 1.0 / (1.0 + np.exp(-z))
 
 def sigmoidGrad(z):
     """ computes the gradient of the sigmoid function at z
-    params:
-        z - a numpy array
-    returns:
-        g'(z)"""
-    
-    if type(z) == sp.csr.csr_matrix:
-        return sigmoid(z).multiply(1 - sigmoid(z))
-    else:
-        return sigmoid(z) * (1 - sigmoid(z))
+    """
+    return sigmoid(z) * (1 - sigmoid(z))
 
 
 class NeuralNet(object):
     """ class that contains a Neural Network
-    and functions for intialising and training it"""
+        and functions for intialising and training it
+    """
 
-    def __init__(self, hiddenLayers, maxiter=100, l=1, epsilon=0.12):
-        """ creates a NeuralNet object
-        :param hiddenLayers: number of hidden units
-        :param maxiter: the number of iterations when training
-        :param l: the regularisation when training and calculating cost
-        :param epsilon: the std dev when generating initial random weights
+    def __init__(self, n_hidden, maxiter=100, l=1, epsilon=0.12):
+        """ creates a neural network with one hidden layer
+                n_hidden: number of hidden units
+                maxiter: the number of iterations when training
+                l: the regularisation when training and calculating cost
+                epsilon: the std dev when generating initial random weights
         """
-        self._hiddenLayers = hiddenLayers
+        self._n_hidden = n_hidden
         self._l = l
         self._maxiter = maxiter
         self._epsilon = epsilon
 
 
     def _cost(self, X, y):
-        # first compute forward propogation.
+        # computes forward propagation
+
         # number of training examples
         m = X.shape[0]
 
         # perform forward propagation. hX is the hypothesised output
         # X already has the bias units added
         hX = X
-        if type(X) == sp.csr.csr_matrix:
-            hX = np.array(sigmoid(hX*sp.csr_matrix(self._theta1.T)).todense())
-        else:
-            hX = sigmoid(np.dot(hX, self._theta1.T))
-        hX = sigmoid(np.dot(np.hstack((np.ones((m, 1)), hX)), self._theta2.T))
+        hX = sigmoid(np.dot(np.hstack((np.ones((m, 1)), hX)), self._theta1.T))
+        hX = sigmoid(np.dot(np.hstack((np.ones((X.shape[0], 1)), hX)), self._theta2.T))
 
         # calculate the cost
         J = (1.0 / m) * (-y * np.log(hX) - (1.0 - y) * np.log(1.0 - hX)).sum()
@@ -88,10 +73,7 @@ class NeuralNet(object):
 
         for i in range(m):
             # propagate forward
-            if type(X) == sp.csr.csr_matrix:
-                a1 = np.array(X[i, :].todense()).T
-            else:
-                a1 = X[i, :, np.newaxis]
+            a1 = np.vstack((1, X[i, :, np.newaxis]))
 
             z2 = np.dot(self._theta1, a1)
             a2 = np.vstack((1, sigmoid(z2)))
@@ -112,11 +94,9 @@ class NeuralNet(object):
         # Note that the first column of theta is removed, as it corresponds
         # to the bias units
         thetaGrad1[:] = (1.0 / m) * (Delta1 + self._l*np.hstack((
-                np.zeros((self._theta1.shape[0], 1)), self._theta1[:, 1:]
-                )))
+                np.zeros((self._theta1.shape[0], 1)), self._theta1[:, 1:])))
         thetaGrad2[:] = (1.0 / m) * (Delta2 + self._l*np.hstack((
-                np.zeros((self._theta2.shape[0], 1)), self._theta2[:, 1:]
-                )))
+                np.zeros((self._theta2.shape[0], 1)), self._theta2[:, 1:])))
         return thetaGrad.ravel()
 
 
@@ -146,23 +126,15 @@ class NeuralNet(object):
         # store both theta1 and theta2 in a continuous block of memory, so that
         # the whole set of theta parameters can easily be flattened for use
         # by optimisation routines
-        self._theta = np.zeros((self._hiddenLayers + 1, inputSize+outputSize+1))
+        self._theta = np.zeros((self._n_hidden + 1, inputSize+outputSize+1))
 
         # define theta1 and theta2 as views into the theta block
-        self._theta1 = self._theta[:self._hiddenLayers, :inputSize+1]
+        self._theta1 = self._theta[:self._n_hidden, :inputSize+1]
         self._theta2 = self._theta[:, inputSize+1:].T
 
         # randomly initialise the weights
         self._theta1[:] = np.random.rand(*self._theta1.shape) * 2*self._epsilon - self._epsilon
         self._theta2[:] = np.random.rand(*self._theta2.shape) * 2*self._epsilon - self._epsilon
-
-        # add the bias units to the input matrix
-        m = X.shape[0]
-        if type(X) == sp.csr.csr_matrix:
-            biasCol = np.ones((X.shape[0],1))
-            X = sp.hstack((biasCol, X), format="csr")
-        else:
-            X = np.hstack((np.ones((m, 1)), X))
 
         # minimise
         thetaParams = op.fmin_bfgs(f, self._theta.ravel(), fGrad,
@@ -175,16 +147,8 @@ class NeuralNet(object):
         # add the bias units to the input matrix
         m = X.shape[0]
 
-        if type(X) == sp.csr.csr_matrix:
-            biasCol = np.ones((X.shape[0],1))
-            X = sp.hstack((biasCol, X), format="csr")
-            hX = X
-            hX = np.array(sigmoid(hX*sp.csr_matrix(self._theta1.T)).todense())
-        else:
-            X = np.hstack((np.ones((m, 1)), X))
-            hX = X
-            hX = sigmoid(np.dot(hX, self._theta1.T))
-
+        hX = X
+        hX = sigmoid(np.dot(np.hstack((np.ones((m, 1)), hX)), self._theta1.T))
         hX = sigmoid(np.dot(np.hstack((np.ones((X.shape[0], 1)), hX)), self._theta2.T))
 
         return hX

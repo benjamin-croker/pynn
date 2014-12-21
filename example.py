@@ -11,20 +11,20 @@ y = iris['target']
 
 # the iris dataset has 4 variables, and three possible outputs (species)
 # 10 is arbitrarily chosen as the number of units in the hidden layer
-nn = pynn.NeuralNet(hiddenLayers=10)
+nn = pynn.NeuralNet(n_hidden=10)
 
 # adjust the y values to an array, with a 1 in relevant column
 yv = np.zeros((y.shape[0], 3))
 for i in range(len(y)):
     yv[i, y[i]] = 1
 
-print "Training"
+print("Training")
 nn.fit(X, yv)
 
-print "Predicting"
+print("Predicting")
 yPred = nn.predict(X)
 
 # convert to a column of labels
 yPredLabels = yPred.argmax(1)
 
-print 'accuracy:', np.mean(yPredLabels == y) * 100, '%'
+print("accuracy: {}%".format(np.mean(yPredLabels == y) * 100))
