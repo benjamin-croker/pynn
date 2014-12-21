@@ -15,4 +15,4 @@ git clone https://github.com/benjamin-croker/pynn.git
 The model uses a single hidden layer in a feed-forward network with sigmoid activation functions.
 It can take sparse scipy matrices as inputs, as well as normal dense numpy arrays.
 
-Example usage is given in `example.py` and `example_sparse.py`.
+Example usage is given in `example.py`
