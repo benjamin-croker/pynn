@@ -13,7 +13,7 @@ def iris_demo():
     iris = load_iris()
     X = iris['data']
     y_labels = iris['target']
-    # adjust the y values to an array with a 1 in relevant column
+
     lb = LabelBinarizer()
     y = lb.fit_transform(y_labels)
     
@@ -33,11 +33,11 @@ def iris_demo():
 
 
 def digits_demo():
-    # load the iris dataset
+    # load the digits dataset
     digits = load_digits()
     X = digits['data']
     y_labels = digits['target']
-    # adjust the y values to an array with a 1 in relevant column
+
     lb = LabelBinarizer()
     y = lb.fit_transform(y_labels)
     
