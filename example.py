@@ -57,4 +57,4 @@ def digits_demo():
 
 
 iris_demo()
-digits_demo()
+# digits_demo()
