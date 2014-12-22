@@ -102,18 +102,6 @@ class NeuralNet(object):
     def fit(self, X, y, batch_size=20, n_epochs=1000, learning_rate=0.001):
         """ returns the cost
         """
-        #define functions to be minimised
-        def f(thetaParams):
-            # set theta
-            self._theta.ravel()[:] = thetaParams
-            # calculate the cost
-            return self._cost(X, y)
-
-        def fGrad(thetaParams):
-            # set theta
-            self._theta.ravel()[:] = thetaParams
-            # calculate the cost gradient
-            return self._costGrad(X, y)
 
         # make y a vertical array if it's not
         if y.ndim == 1:
@@ -122,7 +110,6 @@ class NeuralNet(object):
         input_size = X.shape[1]
         output_size = y.shape[1]
         n_samples = X.shape[0]
-        n_batches = int(np.ceil(n_samples / batch_size))
 
         # store both theta1 and theta2 in a continuous block of memory, so that
         # the whole set of theta parameters can easily be flattened for use

@@ -23,8 +23,8 @@ def iris_demo():
                                                         random_state=SEED)
 
     # train the neural net
-    nn = pynn.NeuralNet(n_hidden=10)
-    nn.fit(X_train, y_train)
+    nn = pynn.NeuralNet(n_hidden=10, l=0.1)
+    nn.fit(X_train, y_train, batch_size=20, n_epochs=2000, learning_rate=0.005)
 
     y_pred = nn.predict(X_test)
 
@@ -47,8 +47,8 @@ def digits_demo():
                                                         random_state=SEED)
 
     # train the neural net
-    nn = pynn.NeuralNet(n_hidden=100)
-    nn.fit(X_train, y_train)
+    nn = pynn.NeuralNet(n_hidden=100, l=0.1)
+    nn.fit(X_train, y_train, batch_size=20, n_epochs=200, learning_rate=0.005)
 
     y_pred = nn.predict(X_test)
 
@@ -56,5 +56,5 @@ def digits_demo():
                 accuracy_score(y_test.argmax(1), y_pred.argmax(1))*100))
 
 
-iris_demo()
-# digits_demo()
+# iris_demo()
+digits_demo()
