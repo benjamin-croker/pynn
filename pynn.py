@@ -1,6 +1,8 @@
 import numpy as np
 from sklearn.cross_validation import ShuffleSplit
 from sklearn.metrics import accuracy_score
+import theano
+import theano.tensor as T
 
 
 def sigmoid(z):
@@ -13,6 +15,67 @@ def sigmoid_grad(z):
     """ computes the gradient of the sigmoid function at z
     """
     return sigmoid(z) * (1 - sigmoid(z))
+
+
+class LogRegression(object):
+    """ class to perform logistic regression
+    """
+
+    def __init__(self, input_size, output_size):
+        # initialise weights and bias
+        self._W = theano.shared(value=np.zeros((input_size,output_size),
+                                               dtype=theano.config.floatX),
+                                name='W',
+                                borrow=True)
+        self._b = theano.shared(value=np.zeros((output_size,),
+                                               dtype=theano.config.floatX),
+                                name='b',
+                                borrow=True)
+        self._params = [self._W, self._b]
+
+        # define the regression function
+        self._y_pred = T.nnet.softmax(T.dot(X, self._W)+self._b)
+        self._y_pred_labels = T.argmax(self._y_pred, axis=1)
+
+    def neg_log_likelihood(self, y):
+        return -T.mean(T.log(self._y_pred)[T.arange(y.shape[0]), y])
+
+
+    def fit(self, X, y, batch_size=20, n_epochs=1000, learning_rate=0.001):
+        """ returns the cost
+        """
+
+        # make y a vertical array if it's not
+        if y.ndim == 1:
+            y = y[:, np.newaxis]
+
+        n_samples = X.shape[0]
+
+        
+
+        # define theta1 and theta2 as views into the theta block
+        self._theta1 = self._theta[:self._n_hidden, :input_size + 1]
+        self._theta2 = self._theta[:, input_size + 1:].T
+
+        # randomly initialise the weights
+        self._theta1[:] = np.random.rand(*self._theta1.shape) * 2 * self._epsilon - self._epsilon
+        self._theta2[:] = np.random.rand(*self._theta2.shape) * 2 * self._epsilon - self._epsilon
+
+        # generate randomised indices
+        epoch_split = ShuffleSplit(n_samples, n_iter=n_epochs, test_size=batch_size)
+
+        for epoch, (train_index, valid_index) in enumerate(epoch_split):
+            # split the training index into minibatches
+            for ind in [train_index[i:i+batch_size] for i in range(0, len(train_index), batch_size)]:
+                theta_grad = self._costGrad(X[ind], y[ind])
+                # update parameters
+                self._theta.ravel()[:] = self._theta.ravel()[:] - learning_rate * theta_grad
+
+            # check the model on the last batch in the epoch
+            y_pred = self.predict(X[valid_index])
+            print("epoch {} accuracy: {}%".format(
+                epoch,
+                accuracy_score(y[valid_index].argmax(1), y_pred.argmax(1)) * 100))
 
 
 class NeuralNet(object):
