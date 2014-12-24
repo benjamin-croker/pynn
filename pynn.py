@@ -17,13 +17,13 @@ def sigmoid_grad(z):
     return sigmoid(z) * (1 - sigmoid(z))
 
 
-class LogRegression(object):
+class LogRegressionLayer(object):
     """ class to perform logistic regression
     """
 
-    def __init__(self, input_size, output_size):
+    def __init__(self, X, input_size, output_size):
         # initialise weights and bias
-        self._W = theano.shared(value=np.zeros((input_size,output_size),
+        self._W = theano.shared(value=np.zeros((input_size, output_size),
                                                dtype=theano.config.floatX),
                                 name='W',
                                 borrow=True)
@@ -37,9 +37,20 @@ class LogRegression(object):
         self._y_pred = T.nnet.softmax(T.dot(X, self._W)+self._b)
         self._y_pred_labels = T.argmax(self._y_pred, axis=1)
 
-    def neg_log_likelihood(self, y):
-        return -T.mean(T.log(self._y_pred)[T.arange(y.shape[0]), y])
+    def neg_log_likelihood(self, y_true):
+        """ y_true is a matrix with a 1 in the column indicating the true class
+        """
+        # TODO: try ':' type indexing
+        return -T.mean(T.log(self._y_pred)[T.arange(y_true.shape[0]), y_true.argmax(1)])
 
+    def accuracy_score(self, y_true):
+        return T.mean(T.neq(self._y_pred.argmax(1), y_true.argmax[1]))
+
+
+class LogRegression(object):
+
+    def __init__(self):
+        pass
 
     def fit(self, X, y, batch_size=20, n_epochs=1000, learning_rate=0.001):
         """ returns the cost
@@ -49,9 +60,25 @@ class LogRegression(object):
         if y.ndim == 1:
             y = y[:, np.newaxis]
 
+        input_size = X.shape[1]
+        output_size = y.shape[1]
         n_samples = X.shape[0]
 
-        
+        # define the logistic regression layer and Theano shared variables
+        X = theano.shared(np.asarray(X, dtype=theano.config.floatX))
+        y = theano.shared(np.asarray(y, dtype=theano.config.floatX))
+
+        X_theano = T.matrix('X')
+        y_theano = T.matrix('y')
+        log_layer = LogRegressionLayer(X, input_size, output_size)
+        validate_model = theano.function(
+            inputs =
+        )
+
+        # store both theta1 and theta2 in a continuous block of memory, so that
+        # the whole set of theta parameters can easily be flattened for use
+        # by optimisation routines
+        self._theta = np.zeros((self._n_hidden + 1, input_size + output_size + 1))
 
         # define theta1 and theta2 as views into the theta block
         self._theta1 = self._theta[:self._n_hidden, :input_size + 1]
@@ -76,6 +103,8 @@ class LogRegression(object):
             print("epoch {} accuracy: {}%".format(
                 epoch,
                 accuracy_score(y[valid_index].argmax(1), y_pred.argmax(1)) * 100))
+
+
 
 
 class NeuralNet(object):
