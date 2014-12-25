@@ -34,7 +34,7 @@ class LogRegressionLayer(object):
         self._params = [self._W, self._b]
 
         # define the regression function
-        self._y_pred = T.nnet.softmax(T.dot(X, self._W)+self._b)
+        self._y_pred = T.nnet.softmax(T.dot(X, self._W) + self._b)
         self._y_pred_labels = T.argmax(self._y_pred, axis=1)
 
     def neg_log_likelihood(self, y_true):
@@ -44,11 +44,10 @@ class LogRegressionLayer(object):
         return -T.mean(T.log(self._y_pred)[T.arange(y_true.shape[0]), y_true.argmax(1)])
 
     def accuracy_score(self, y_true):
-        return T.mean(T.neq(self._y_pred.argmax(1), y_true.argmax[1]))
+        return T.mean(T.neq(self._y_pred.argmax(1), y_true.argmax(1)))
 
 
 class LogRegression(object):
-
     def __init__(self):
         pass
 
@@ -65,46 +64,51 @@ class LogRegression(object):
         n_samples = X.shape[0]
 
         # define the logistic regression layer and Theano shared variables
-        X = theano.shared(np.asarray(X, dtype=theano.config.floatX))
-        y = theano.shared(np.asarray(y, dtype=theano.config.floatX))
+        X = theano.shared(np.asarray(X, dtype=theano.config.floatX), borrow=True)
+        y = theano.shared(np.asarray(y, dtype=theano.config.floatX), borrow=True)
 
         X_theano = T.matrix('X')
         y_theano = T.matrix('y')
-        log_layer = LogRegressionLayer(X, input_size, output_size)
+        i_theano = T.lvector()
+        log_layer = LogRegressionLayer(X_theano, input_size, output_size)
+
         validate_model = theano.function(
-            inputs =
+            inputs=[i_theano],
+            outputs=log_layer.accuracy_score(y),
+            givens={
+                X_theano: X[i_theano],
+                y_theano: y[i_theano]
+            }
         )
 
-        # store both theta1 and theta2 in a continuous block of memory, so that
-        # the whole set of theta parameters can easily be flattened for use
-        # by optimisation routines
-        self._theta = np.zeros((self._n_hidden + 1, input_size + output_size + 1))
+        # gradients for cost
+        cost = log_layer.neg_log_likelihood(y_theano)
+        g_W = T.grad(cost=cost, wrt=log_layer._W)
+        g_b = T.grad(cost=cost, wrt=log_layer._b)
 
-        # define theta1 and theta2 as views into the theta block
-        self._theta1 = self._theta[:self._n_hidden, :input_size + 1]
-        self._theta2 = self._theta[:, input_size + 1:].T
+        updates = [(log_layer.W, log_layer.W - learning_rate * g_W),
+                   (log_layer.b, log_layer.b - learning_rate * g_b)]
 
-        # randomly initialise the weights
-        self._theta1[:] = np.random.rand(*self._theta1.shape) * 2 * self._epsilon - self._epsilon
-        self._theta2[:] = np.random.rand(*self._theta2.shape) * 2 * self._epsilon - self._epsilon
+        train_model = theano.function(
+            inputs=[i_theano],
+            outputs=cost,
+            updates=updates,
+            givens={
+                X_theano: X[i_theano],
+                y_theano: y[i_theano]
+            }
+        )
 
-        # generate randomised indices
         epoch_split = ShuffleSplit(n_samples, n_iter=n_epochs, test_size=batch_size)
 
         for epoch, (train_index, valid_index) in enumerate(epoch_split):
             # split the training index into minibatches
-            for ind in [train_index[i:i+batch_size] for i in range(0, len(train_index), batch_size)]:
-                theta_grad = self._costGrad(X[ind], y[ind])
-                # update parameters
-                self._theta.ravel()[:] = self._theta.ravel()[:] - learning_rate * theta_grad
+            for ind in [train_index[i:i + batch_size] for i in range(0, len(train_index), batch_size)]:
+                train_model(ind)
 
             # check the model on the last batch in the epoch
-            y_pred = self.predict(X[valid_index])
-            print("epoch {} accuracy: {}%".format(
-                epoch,
-                accuracy_score(y[valid_index].argmax(1), y_pred.argmax(1)) * 100))
-
-
+            accuracy_score = validate_model(valid_index)
+            print("epoch {} error: {}%".format(epoch, accuracy_score))
 
 
 class NeuralNet(object):
@@ -221,7 +225,7 @@ class NeuralNet(object):
 
         for epoch, (train_index, valid_index) in enumerate(epoch_split):
             # split the training index into minibatches
-            for ind in [train_index[i:i+batch_size] for i in range(0, len(train_index), batch_size)]:
+            for ind in [train_index[i:i + batch_size] for i in range(0, len(train_index), batch_size)]:
                 theta_grad = self._costGrad(X[ind], y[ind])
                 # update parameters
                 self._theta.ravel()[:] = self._theta.ravel()[:] - learning_rate * theta_grad

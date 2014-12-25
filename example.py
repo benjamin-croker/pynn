@@ -56,5 +56,24 @@ def digits_demo():
                 accuracy_score(y_test.argmax(1), y_pred.argmax(1))*100))
 
 
+def theano_digits_demo():
+    # load the digits dataset
+    digits = load_digits()
+    X = digits['data']
+    y_labels = digits['target']
+
+    lb = LabelBinarizer()
+    y = lb.fit_transform(y_labels)
+
+    # split into train and test datasets
+    X_train, X_test, y_train, y_test = train_test_split(X, y,
+                                                        test_size=0.25,
+                                                        random_state=SEED)
+
+    # train the neural net
+    nn = pynn.LogRegression()
+    nn.fit(X_train, y_train, batch_size=20, n_epochs=200, learning_rate=0.005)
+
+
 # iris_demo()
-digits_demo()
+theano_digits_demo()
