@@ -74,7 +74,7 @@ class LogRegression(object):
 
         validate_model = theano.function(
             inputs=[i_theano],
-            outputs=log_layer.accuracy_score(y),
+            outputs=log_layer.accuracy_score(y_theano),
             givens={
                 X_theano: X[i_theano],
                 y_theano: y[i_theano]
@@ -86,8 +86,8 @@ class LogRegression(object):
         g_W = T.grad(cost=cost, wrt=log_layer._W)
         g_b = T.grad(cost=cost, wrt=log_layer._b)
 
-        updates = [(log_layer.W, log_layer.W - learning_rate * g_W),
-                   (log_layer.b, log_layer.b - learning_rate * g_b)]
+        updates = [(log_layer._W, log_layer._W - learning_rate * g_W),
+                   (log_layer._b, log_layer._b - learning_rate * g_b)]
 
         train_model = theano.function(
             inputs=[i_theano],
@@ -104,7 +104,9 @@ class LogRegression(object):
         for epoch, (train_index, valid_index) in enumerate(epoch_split):
             # split the training index into minibatches
             for ind in [train_index[i:i + batch_size] for i in range(0, len(train_index), batch_size)]:
-                train_model(ind)
+                # don't train on incomplete batches
+                if len(ind) >= batch_size:
+                    train_model(ind)
 
             # check the model on the last batch in the epoch
             accuracy_score = validate_model(valid_index)
