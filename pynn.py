@@ -21,7 +21,7 @@ class LogRegressionLayer(object):
     """ class to perform logistic regression
     """
 
-    def __init__(self, X, input_size, output_size):
+    def __init__(self, input_size, output_size):
         # initialise weights and bias
         self._W = theano.shared(value=np.zeros((input_size, output_size),
                                                dtype=theano.config.floatX),
@@ -33,23 +33,34 @@ class LogRegressionLayer(object):
                                 borrow=True)
         self._params = [self._W, self._b]
 
-        # define the regression function
-        self._y_pred = T.nnet.softmax(T.dot(X, self._W) + self._b)
-        self._y_pred_labels = T.argmax(self._y_pred, axis=1)
+    def updates(self, X, y_true, learning_rate):
+        """ rule for updating the weights
+        """
+        cost = self.neg_log_likelihood(X, y_true)
+        grad_W = T.grad(cost=cost, wrt=self._W)
+        grad_b = T.grad(cost=cost, wrt=self._b)
 
-    def neg_log_likelihood(self, y_true):
+        return [(self._W, self._W - learning_rate * grad_W),
+                (self._b, self._b - learning_rate * grad_b)]
+
+    def predict(self, X):
+        """ calculates the predicted y values from inputs using existing weights
+        """
+        return T.nnet.softmax(T.dot(X, self._W) + self._b)
+
+    def neg_log_likelihood(self, X, y_true):
         """ y_true is a matrix with a 1 in the column indicating the true class
         """
         # TODO: try ':' type indexing
-        return -T.mean(T.log(self._y_pred)[T.arange(y_true.shape[0]), y_true.argmax(1)])
+        return -T.mean(T.log(self.predict(X))[T.arange(y_true.shape[0]), y_true.argmax(1)])
 
-    def accuracy_score(self, y_true):
-        return T.mean(T.neq(self._y_pred.argmax(1), y_true.argmax(1)))
+    def accuracy_score(self, X, y_true):
+        return T.mean(T.neq(self.predict(X).argmax(1), y_true.argmax(1)))
 
 
 class LogRegression(object):
     def __init__(self):
-        pass
+        self._log_layer = None
 
     def fit(self, X, y, batch_size=20, n_epochs=1000, learning_rate=0.001):
         """ returns the cost
@@ -63,39 +74,32 @@ class LogRegression(object):
         output_size = y.shape[1]
         n_samples = X.shape[0]
 
-        # define the logistic regression layer and Theano shared variables
+        # convert the input numpy arrays to theano shared variables
         X = theano.shared(np.asarray(X, dtype=theano.config.floatX), borrow=True)
         y = theano.shared(np.asarray(y, dtype=theano.config.floatX), borrow=True)
-
+        # define theano symbolic variables
         X_theano = T.matrix('X')
         y_theano = T.matrix('y')
-        i_theano = T.lvector()
-        log_layer = LogRegressionLayer(X_theano, input_size, output_size)
+        batch_index = T.lvector()
+        # define the logistic regression layer
+        self._log_layer = LogRegressionLayer(input_size, output_size)
 
-        validate_model = theano.function(
-            inputs=[i_theano],
-            outputs=log_layer.accuracy_score(y_theano),
+        validate_batch = theano.function(
+            inputs=[batch_index],
+            outputs=self._log_layer.accuracy_score(X_theano, y_theano),
             givens={
-                X_theano: X[i_theano],
-                y_theano: y[i_theano]
+                X_theano: X[batch_index],
+                y_theano: y[batch_index]
             }
         )
 
-        # gradients for cost
-        cost = log_layer.neg_log_likelihood(y_theano)
-        g_W = T.grad(cost=cost, wrt=log_layer._W)
-        g_b = T.grad(cost=cost, wrt=log_layer._b)
-
-        updates = [(log_layer._W, log_layer._W - learning_rate * g_W),
-                   (log_layer._b, log_layer._b - learning_rate * g_b)]
-
-        train_model = theano.function(
-            inputs=[i_theano],
-            outputs=cost,
-            updates=updates,
+        train_batch = theano.function(
+            inputs=[batch_index],
+            outputs=self._log_layer.neg_log_likelihood(X_theano, y_theano),
+            updates=self._log_layer.updates(X_theano, y_theano, learning_rate),
             givens={
-                X_theano: X[i_theano],
-                y_theano: y[i_theano]
+                X_theano: X[batch_index],
+                y_theano: y[batch_index]
             }
         )
 
@@ -106,11 +110,10 @@ class LogRegression(object):
             for ind in [train_index[i:i + batch_size] for i in range(0, len(train_index), batch_size)]:
                 # don't train on incomplete batches
                 if len(ind) >= batch_size:
-                    train_model(ind)
+                    train_batch(ind)
 
             # check the model on the last batch in the epoch
-            accuracy_score = validate_model(valid_index)
-            print("epoch {} error: {}%".format(epoch, accuracy_score))
+            print("epoch {} error: {}%".format(epoch, 100*validate_batch(valid_index)))
 
 
 class NeuralNet(object):
