@@ -115,6 +115,24 @@ class LogRegression(object):
             # check the model on the last batch in the epoch
             print("epoch {} error: {}%".format(epoch, 100*validate_batch(valid_index)))
 
+    def predict(self, X):
+
+        # convert the input numpy arrays to theano shared variables
+        X = theano.shared(np.asarray(X, dtype=theano.config.floatX), borrow=True)
+        # define theano symbolic variables
+        X_theano = T.matrix('X')
+
+        predict_all = theano.function(
+            inputs=[],
+            outputs=self._log_layer.predict(X_theano),
+            givens={
+                X_theano: X
+            }
+        )
+
+        return predict_all()
+
+
 
 class NeuralNet(object):
     """ class that contains a Neural Network

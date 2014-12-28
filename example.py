@@ -71,9 +71,13 @@ def theano_digits_demo():
                                                         random_state=SEED)
 
     # train the neural net
-    nn = pynn.LogRegression()
-    nn.fit(X_train, y_train, batch_size=20, n_epochs=200, learning_rate=0.005)
+    lr = pynn.LogRegression()
+    lr.fit(X_train, y_train, batch_size=20, n_epochs=200, learning_rate=0.005)
 
+    y_pred = lr.predict(X_test)
+
+    print("digits accuracy: {}%".format(
+                accuracy_score(y_test.argmax(1), y_pred.argmax(1))*100))
 
 # iris_demo()
 theano_digits_demo()
