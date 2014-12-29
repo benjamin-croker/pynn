@@ -6,7 +6,7 @@ import numpy as np
 
 import pynn
 
-SEED = 42
+RANDOM_STATE = np.random.RandomState(42)
 
 def iris_demo():
     # load the iris dataset
@@ -20,10 +20,10 @@ def iris_demo():
     # split into train and test datasets
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         test_size=0.25,
-                                                        random_state=SEED)
+                                                        random_state=RANDOM_STATE)
 
     # train the neural net
-    nn = pynn.NeuralNet(n_hidden=10, l=0.1)
+    nn = pynn.PyNeuralNet(n_hidden=10, l=0.1)
     nn.fit(X_train, y_train, batch_size=20, n_epochs=2000, learning_rate=0.005)
 
     y_pred = nn.predict(X_test)
@@ -44,10 +44,10 @@ def digits_demo():
     # split into train and test datasets
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         test_size=0.25,
-                                                        random_state=SEED)
+                                                        random_state=RANDOM_STATE)
 
     # train the neural net
-    nn = pynn.NeuralNet(n_hidden=100, l=0.1)
+    nn = pynn.PyNeuralNet(n_hidden=100, l=0.1)
     nn.fit(X_train, y_train, batch_size=20, n_epochs=200, learning_rate=0.005)
 
     y_pred = nn.predict(X_test)
@@ -68,10 +68,10 @@ def theano_digits_demo():
     # split into train and test datasets
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         test_size=0.25,
-                                                        random_state=SEED)
+                                                        random_state=RANDOM_STATE)
 
     # train the neural net
-    lr = pynn.LogRegression()
+    lr = pynn.LogRegression(X_train.shape[1], y_train.shape[1])
     lr.fit(X_train, y_train, batch_size=20, n_epochs=200, learning_rate=0.005)
 
     y_pred = lr.predict(X_test)
