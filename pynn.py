@@ -1,6 +1,5 @@
 import numpy as np
 from sklearn.cross_validation import ShuffleSplit
-from sklearn.metrics import accuracy_score
 import theano
 import theano.tensor as T
 
@@ -188,7 +187,7 @@ class LogRegression(object):
 
 
 class NeuralNet(object):
-    def __init__(self, input_size, output_size, hidden_sizes):
+    def __init__(self, input_size, output_size, hidden_sizes, learning_rate):
         """ Takes the input and output dimensions, and a list of ints,
             representing the number of neurons in each hidden layer
         """
@@ -210,10 +209,50 @@ class NeuralNet(object):
         # add the last layer, a logistic regression classifier
         self._layers += [LogRegressionLayer(self._layers[-1].output, hidden_sizes[-1], output_size)]
 
+        # add cost and output connections
         self._cost = self._layers[-1].neg_log_likelihood(self._desired_output)
         self._output = self._layers[-1].output
 
-    def fit(self, X, y, batch_size=20, n_epochs=1000, learning_rate=0.001):
+        # build the training, validation and testing functions
+        # inputs for the theano functions
+        X_theano = T.matrix('X_theano')
+        y_theano = T.matrix('y_theano')
+
+        # update rules
+        updates = [update
+                   for layer in self._layers
+                   for update in layer.updates(self._cost, learning_rate)]
+
+
+        self.train_batch = theano.function(
+            inputs=[X_theano, y_theano],
+            outputs=self._cost,
+            updates=updates,
+            givens={
+                self._input: X_theano,
+                self._desired_output: y_theano
+            }
+        )
+
+        self.validate_batch = theano.function(
+            inputs=[X_theano, y_theano],
+            outputs=self._layers[-1].accuracy_score(self._desired_output),
+            givens={
+                self._input: X_theano,
+                self._desired_output: y_theano
+            }
+        )
+
+        self.predict = theano.function(
+            inputs=[X_theano],
+            outputs=self._output,
+            givens={
+                self._input: X_theano
+            }
+        )
+
+
+    def fit(self, X, y, batch_size=20, n_epochs=1000):
         """ returns the cost
         """
 
@@ -223,58 +262,15 @@ class NeuralNet(object):
 
         n_samples = X.shape[0]
 
-        # convert the input numpy arrays to theano shared variables
-        X = theano.shared(np.asarray(X, dtype=theano.config.floatX), borrow=True)
-        y = theano.shared(np.asarray(y, dtype=theano.config.floatX), borrow=True)
-        # theano vector for indexing batches
-        batch_index = T.lvector()
-
-        updates = [update
-                   for layer in self._layers
-                   for update in layer.updates(self._cost, learning_rate)]
-
-        validate_batch = theano.function(
-            inputs=[batch_index],
-            outputs=self._layers[-1].accuracy_score(self._desired_output),
-            givens={
-                self._input: X[batch_index],
-                self._desired_output: y[batch_index]
-            }
-        )
-
-        train_batch = theano.function(
-            inputs=[batch_index],
-            outputs=self._cost,
-            updates=updates,
-            givens={
-                self._input: X[batch_index],
-                self._desired_output: y[batch_index]
-            }
-        )
-
         epoch_split = ShuffleSplit(n_samples, n_iter=n_epochs, test_size=batch_size)
 
         for epoch, (train_index, valid_index) in enumerate(epoch_split):
             # split the training index into minibatches
-            for ind in [train_index[i:i + batch_size] for i in range(0, len(train_index), batch_size)]:
+            for batch_index in [train_index[i:i + batch_size] for i in range(0, len(train_index), batch_size)]:
                 # don't train on incomplete batches
-                if len(ind) >= batch_size:
-                    train_batch(ind)
+                if len(batch_index) >= batch_size:
+                    self.train_batch(X[batch_index], y[batch_index])
 
             # check the model on the last batch in the epoch
-            print("epoch {} error: {}%".format(epoch, 100 * validate_batch(valid_index)))
-
-    def predict(self, X):
-
-        # convert the input numpy arrays to theano shared variables
-        X = theano.shared(np.asarray(X, dtype=theano.config.floatX), borrow=True)
-
-        predict_all = theano.function(
-            inputs=[],
-            outputs=self._output,
-            givens={
-                self._input: X
-            }
-        )
-
-        return predict_all()
+            print("epoch {} error: {}%".format(
+                        epoch, 100 * self.validate_batch(X[valid_index], y[valid_index])))

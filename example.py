@@ -48,8 +48,10 @@ def digits_demo():
                                                         random_state=RANDOM_STATE)
 
     # train the neural net
-    nn = pynn.NeuralNet(X_train.shape[1], y_train.shape[1], [20])
-    nn.fit(X_train, y_train, batch_size=20, n_epochs=200, learning_rate=0.005)
+    print("Building Model")
+    nn = pynn.NeuralNet(X_train.shape[1], y_train.shape[1], [20], learning_rate=0.005)
+    print("Training")
+    nn.fit(X_train, y_train, batch_size=20, n_epochs=200)
 
     y_pred = nn.predict(X_test)
 
@@ -57,5 +59,5 @@ def digits_demo():
         accuracy_score(y_test.argmax(1), y_pred.argmax(1)) * 100))
 
 
-iris_demo()
+# iris_demo()
 digits_demo()
