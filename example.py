@@ -56,7 +56,8 @@ def digits_demo():
 
     # train the neural net
     print("Building neural net to classify digits")
-    nn = pynn.ArtificialNeuralNet([X_train.shape[1], 20, y_train.shape[1]])
+    nn = pynn.ArtificialNeuralNet([X_train.shape[1], 20, y_train.shape[1]],
+                                  random_state=RANDOM_STATE)
     print("Training")
     nn.fit(X_train, y_train,
            batch_size=20, n_epochs=20,
@@ -69,6 +70,38 @@ def digits_demo():
         accuracy_score(y_test.argmax(1), y_pred.argmax(1)) * 100))
 
 
+def conv_demo():
+    # load the digits dataset
+    digits = load_digits()
+    X = digits['data']
+    y_labels = digits['target']
+
+    lb = LabelBinarizer()
+    y = lb.fit_transform(y_labels)
+
+    # split into train and test datasets
+    X_train, X_test, y_train, y_test = train_test_split(X, y,
+                                                        test_size=0.25,
+                                                        random_state=RANDOM_STATE)
+
+    # train the neural net
+    print("Building neural net to classify digits")
+    conv_net = pynn.ConvNet(digits['images'][0].shape, 1, y.shape[1],
+                            random_state=RANDOM_STATE)
+    print("Training")
+    conv_net.fit(X_train, y_train,
+                 batch_size=20, n_epochs=20,
+                 learning_rate=0.05,
+                 random_state=RANDOM_STATE)
+
+    y_pred = conv_net.predict(X_test)
+
+    print("digits accuracy: {}%".format(
+        accuracy_score(y_test.argmax(1), y_pred.argmax(1)) * 100))
+
+
 logging.basicConfig(level=logging.DEBUG)
-iris_demo()
-digits_demo()
+# iris_demo()
+# digits_demo()
+
+conv_demo()

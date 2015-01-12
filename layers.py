@@ -1,5 +1,6 @@
 import numpy as np
 import theano
+import theano.printing
 import theano.tensor as T
 from theano.tensor.nnet import conv
 from theano.tensor.signal import downsample
@@ -113,7 +114,8 @@ class ConvolutionLayer(object):
     """
 
     def __init__(self,
-                 input_matrix, n_input_maps, n_filters, filter_shape, pool_shape,
+                 input_matrix, image_shape,
+                 n_input_maps, n_filters, filter_shape, pool_shape,
                  activation=T.tanh, random_state=None):
         # initialise weights and bias
 
@@ -121,6 +123,8 @@ class ConvolutionLayer(object):
         # sqrt(-6./(n_in+n_hidden)) to sqrt(6./(n_in+n_hidden))
         # for a sigmoid activation function, the weights should be 4 times this
         # for any other activation functions, use the tanh initialisation
+
+        # TODO check filter shapes
 
         if random_state is None:
             random_state = np.random.RandomState()
@@ -135,7 +139,7 @@ class ConvolutionLayer(object):
                     random_state.uniform(
                         low=-4.0 * np.sqrt(6.0 / (input_size + output_size)),
                         high=4.0 * np.sqrt(6.0 / (input_size + output_size)),
-                        size=(input_size, output_size)),
+                        size=(n_filters, n_input_maps, filter_shape[0], filter_shape[1])),
                     dtype=theano.config.floatX),
                 name='W',
                 borrow=True)
@@ -145,7 +149,7 @@ class ConvolutionLayer(object):
                     random_state.uniform(
                         low=-np.sqrt(6.0 / (input_size + output_size)),
                         high=np.sqrt(6.0 / (input_size + output_size)),
-                        size=(input_size, output_size)),
+                        size=(n_filters, n_input_maps, filter_shape[0], filter_shape[1])),
                     dtype=theano.config.floatX),
                 name='W',
                 borrow=True)
@@ -163,7 +167,7 @@ class ConvolutionLayer(object):
 
         # convolve input then downsample with max pooling
         conv_out = conv.conv2d(
-            input=input,
+            input=self.input,
             filters=self._W,
             filter_shape=(n_filters, n_input_maps, filter_shape[0], filter_shape[1])
         )
@@ -179,6 +183,8 @@ class ConvolutionLayer(object):
         # thus be broadcasted across mini-batches and feature map
         # width & height
         self.output = activation(pooled_out + self._b.dimshuffle('x', 0, 'x', 'x'))
+        self.output_image_shape = (int((image_shape[0]-filter_shape[0]+1)/pool_shape[0]),
+                                   int((image_shape[1]-filter_shape[1]+1)/pool_shape[1]))
 
     def updates(self, cost, learning_rate):
         """ rule for updating the weights
