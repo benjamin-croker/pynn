@@ -25,7 +25,9 @@ class ArtificialNeuralNet(object):
             raise ValueError("layer_sizes must be a list with at least input, hidden and output sizes")
 
         if random_state is None:
-            random_state = np.random.RandomState()
+            self._random_state = np.random.RandomState()
+        else:
+            self._random_state = random_state
 
         # initialise connection points for data
         self._input = T.matrix()
@@ -35,7 +37,7 @@ class ArtificialNeuralNet(object):
         # add the first layer, connected to the input
         self._layers = [HiddenLayer(self._input,
                                     layer_sizes[0], layer_sizes[1],
-                                    random_state=random_state)]
+                                    random_state=self._random_state)]
 
         # add the hidden layers
         for i in range(1, len(layer_sizes) - 2):
@@ -90,29 +92,27 @@ class ArtificialNeuralNet(object):
             }
         )
 
-    def fit(self, X, y, batch_size, n_epochs, learning_rate, validation_size=0.25, random_state=None):
-        """ Performs minibatch training on the data. X and y must both be
-            two dimensional numpy arrays
-            validation_size is the percentage of training examples to use for
-            tracking performance each epoch.
-            One epoch involves randomly splitting the data into a training and validation set.
-            All training data is used for training, and the error on the validation
-            set is reported each epoch.
+    def fit(self, X, y, X_valid, y_valid,
+            batch_size, n_epochs, learning_rate,
+            random_state=None):
+        """ Performs minibatch training on the data. Fits X and y, using X_valid, y_valid
+            as a validation set.
         """
 
-        epoch_split = ShuffleSplit(X.shape[0], n_iter=n_epochs, test_size=validation_size,
-                                   random_state=random_state)
+        for epoch in range(n_epochs):
+            # create a shuffled index to randomise the order of training data
+            index = np.arange(len(X))
+            rand_index = self._random_state.shuffle(index)
 
-        for epoch, (train_index, valid_index) in enumerate(epoch_split):
             # split the training index into minibatches
-            for batch_index in [train_index[i:i + batch_size]
-                                for i in range(0, len(train_index), batch_size)]:
+            for batch_index in [rand_index[i:i + batch_size]
+                                for i in range(0, len(rand_index), batch_size)]:
                 # don't train on incomplete batches
                 if len(batch_index) >= batch_size:
                     self.partial_fit(X[batch_index], y[batch_index], learning_rate)
 
             logging.debug("epoch {} error: {}%".format(
-                epoch, 100 * self.validate_batch(X[valid_index], y[valid_index])))
+                epoch, 100 * self.validate_batch(X_valid, y_valid)))
 
 
 class ConvNet(object):
@@ -127,7 +127,10 @@ class ConvNet(object):
         # TODO allow variable filter and max pooling sizes
 
         if random_state is None:
-            random_state = np.random.RandomState()
+            self._random_state = np.random.RandomState()
+        else:
+            self._random_state = random_state
+
 
         # initialise connection points for data
         self._input = T.tensor4()
@@ -143,12 +146,12 @@ class ConvNet(object):
                                          n_filters=20,
                                          filter_shape=(3, 3),
                                          pool_shape=(2, 2),
-                                         random_state=random_state)]
+                                         random_state=self._random_state)]
 
         self._layers += [HiddenLayer(self._layers[-1].output.flatten(2),
-                                     input_size=20*np.prod(self._layers[-1].output_image_shape),
+                                     input_size=20 * np.prod(self._layers[-1].output_image_shape),
                                      output_size=10,
-                                     random_state=random_state)]
+                                     random_state=self._random_state)]
 
         # add the last layer, a logistic regression classifier
         self._layers += [LogRegressionLayer(self._layers[-1].output,
@@ -205,29 +208,26 @@ class ConvNet(object):
         """
         return X.reshape(X.shape[0], self._image_channels, self._image_shape[0], self._image_shape[1])
 
-    def fit(self, X, y, batch_size, n_epochs, learning_rate, validation_size=0.25, random_state=None):
-        """ Performs minibatch training on the data. X and y must both be
-            two dimensional numpy arrays
-            validation_size is the percentage of training examples to use for
-            tracking performance each epoch.
-            One epoch involves randomly splitting the data into a training and validation set.
-            All training data is used for training, and the error on the validation
-            set is reported each epoch.
+    def fit(self, X, y, X_valid, y_valid,
+            batch_size, n_epochs, learning_rate):
+        """ Performs minibatch training on the data. Fits X and y, using X_valid, y_valid
+            as a validation set.
         """
 
-        epoch_split = ShuffleSplit(X.shape[0], n_iter=n_epochs, test_size=validation_size,
-                                   random_state=random_state)
+        for epoch in range(n_epochs):
+            # create a shuffled index to randomise the order of training data
+            rand_index = np.arange(len(X))
+            self._random_state.shuffle(np.arange(len(X)))
 
-        for epoch, (train_index, valid_index) in enumerate(epoch_split):
             # split the training index into minibatches
-            for batch_index in [train_index[i:i + batch_size]
-                                for i in range(0, len(train_index), batch_size)]:
+            for batch_index in [rand_index[i:i + batch_size]
+                                for i in range(0, len(rand_index), batch_size)]:
                 # don't train on incomplete batches
                 if len(batch_index) >= batch_size:
                     self.partial_fit(self._reshape_image(X[batch_index]), y[batch_index], learning_rate)
 
             logging.debug("epoch {} error: {}%".format(
-                epoch, 100 * self.validate_batch(X[valid_index], y[valid_index])))
+                epoch, 100 * self.validate_batch(X_valid, y_valid)))
 
     def validate_batch(self, X, y):
         return self._validate_batch(self._reshape_image(X), y)

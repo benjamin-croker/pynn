@@ -20,18 +20,21 @@ def iris_demo():
     lb = LabelBinarizer()
     y = lb.fit_transform(y_labels)
 
-    # split into train and test datasets
+    # split into training, validation and test datasets
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         test_size=0.25,
                                                         random_state=RANDOM_STATE)
+
+    X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train,
+                                                          test_size=0.25,
+                                                          random_state=RANDOM_STATE)
 
     # train the neural net
     print("Building logistic regression classifier to classify iris data")
     nn = pynn.ArtificialNeuralNet([X_train.shape[1], 20, y_train.shape[1]])
     print("Training")
-    nn.fit(X_train, y_train,
-           batch_size=20, n_epochs=20,
-           learning_rate=0.05,
+    nn.fit(X_train, y_train, X_valid, y_valid,
+           batch_size=20, n_epochs=20, learning_rate=0.05,
            random_state=RANDOM_STATE)
 
     y_pred = nn.predict(X_test)
@@ -49,20 +52,22 @@ def digits_demo():
     lb = LabelBinarizer()
     y = lb.fit_transform(y_labels)
 
-    # split into train and test datasets
+    # split into training, validation and test datasets
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         test_size=0.25,
                                                         random_state=RANDOM_STATE)
+
+    X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train,
+                                                          test_size=0.25,
+                                                          random_state=RANDOM_STATE)
 
     # train the neural net
     print("Building neural net to classify digits")
     nn = pynn.ArtificialNeuralNet([X_train.shape[1], 20, y_train.shape[1]],
                                   random_state=RANDOM_STATE)
     print("Training")
-    nn.fit(X_train, y_train,
-           batch_size=20, n_epochs=20,
-           learning_rate=0.05,
-           random_state=RANDOM_STATE)
+    nn.fit(X_train, y_train, X_valid, y_valid,
+           batch_size=20, n_epochs=20, learning_rate=0.05)
 
     y_pred = nn.predict(X_test)
 
@@ -79,20 +84,22 @@ def conv_demo():
     lb = LabelBinarizer()
     y = lb.fit_transform(y_labels)
 
-    # split into train and test datasets
+    # split into training, validation and test datasets
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         test_size=0.25,
                                                         random_state=RANDOM_STATE)
+
+    X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train,
+                                                          test_size=0.25,
+                                                          random_state=RANDOM_STATE)
 
     # train the neural net
     print("Building neural net to classify digits")
     conv_net = pynn.ConvNet(digits['images'][0].shape, 1, y.shape[1],
                             random_state=RANDOM_STATE)
     print("Training")
-    conv_net.fit(X_train, y_train,
-                 batch_size=20, n_epochs=20,
-                 learning_rate=0.05,
-                 random_state=RANDOM_STATE)
+    conv_net.fit(X_train, y_train, X_valid, y_valid,
+                 batch_size=20, n_epochs=20, learning_rate=0.05)
 
     y_pred = conv_net.predict(X_test)
 
