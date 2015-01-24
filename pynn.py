@@ -174,7 +174,7 @@ class ConvNet(object):
                    for layer in self._layers
                    for update in layer.updates(self._cost, self._lr)]
 
-        self.partial_fit = theano.function(
+        self._partial_fit = theano.function(
             inputs=[X_theano, y_theano, lr_theano],
             outputs=self._cost,
             updates=updates,
@@ -228,6 +228,9 @@ class ConvNet(object):
 
             logging.debug("epoch {} error: {}%".format(
                 epoch, 100 * self.validate_batch(X_valid, y_valid)))
+
+    def partial_fit(self, X, y, learning_rate):
+        return self._partial_fit(self._reshape_image(X), y, learning_rate)
 
     def validate_batch(self, X, y):
         return self._validate_batch(self._reshape_image(X), y)
