@@ -217,14 +217,14 @@ class ConvNet(object):
         for epoch in range(n_epochs):
             # create a shuffled index to randomise the order of training data
             rand_index = np.arange(len(X))
-            self._random_state.shuffle(np.arange(len(X)))
+            self._random_state.shuffle(rand_index)
 
             # split the training index into minibatches
             for batch_index in [rand_index[i:i + batch_size]
                                 for i in range(0, len(rand_index), batch_size)]:
                 # don't train on incomplete batches
                 if len(batch_index) >= batch_size:
-                    self.partial_fit(self._reshape_image(X[batch_index]), y[batch_index], learning_rate)
+                    self.partial_fit(X[batch_index], y[batch_index], learning_rate)
 
             logging.debug("epoch {} error: {}%".format(
                 epoch, 100 * self.validate_batch(X_valid, y_valid)))
